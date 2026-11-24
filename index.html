@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Task Board</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Student Task Board</h1>
+  <p>Task Management Application – MERN Stack</p>
+</header>
+
+<nav>
+  <a href="#add">Add Task</a>
+  <a href="#board">Task Board</a>
+</nav>
+
+<div id="root"></div>
+
+<footer>
+  <p>&copy; 2026 Student Task Board. Web Design Lab Experiment 12.</p>
+</footer>
+
+<script type="text/babel">
+const { useState } = React;
+
+const initialTasks = [
+  { id: 1, title: "Set up MongoDB Atlas database", status: "Done", category: "Database" },
+  { id: 2, title: "Create Express API endpoints", status: "Done", category: "Backend" },
+  { id: 3, title: "Build React task components", status: "In Progress", category: "Frontend" },
+  { id: 4, title: "Test cloud deployment", status: "Pending", category: "Deployment" }
+];
+
+function TaskBoard() {
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem("mern_tasks");
+      return saved ? JSON.parse(saved) : initialTasks;
+    } catch(e) {
+      return initialTasks;
+    }
+  });
+
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("Frontend");
+  const [filter, setFilter] = useState("All");
+
+  function saveTasks(updatedList) {
+    setTasks(updatedList);
+    try {
+      localStorage.setItem("mern_tasks", JSON.stringify(updatedList));
+    } catch(e) {}
+  }
+
+  function handleAddTask(e) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    const newTask = {
+      id: Date.now(),
+      title: title.trim(),
+      status: "Pending",
+      category: category
+    };
+    saveTasks([...tasks, newTask]);
+    setTitle("");
+  }
+
+  function handleStatusChange(id, newStatus) {
+    saveTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
+  }
+
+  function handleDeleteTask(id) {
+    if (confirm("Delete this task?")) {
+      saveTasks(tasks.filter(t => t.id !== id));
+    }
+  }
+
+  const statuses = ["All", "Pending", "In Progress", "Done"];
+  const visibleTasks = filter === "All" ? tasks : tasks.filter(t => t.status === filter);
+
+  return (
+    <div style={{ maxWidth: "750px", margin: "25px auto", padding: "0 20px" }}>
+      {/* Add Task Form */}
+      <div className="form-panel" id="add">
+        <h2>Add a Task</h2>
+        <form onSubmit={handleAddTask} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Enter task description..."
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            style={{ flex: 1, minWidth: "180px", padding: "9px 10px", border: "1px solid #bbb", borderRadius: "4px", fontSize: "14px" }}
+            required
+          />
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            style={{ padding: "9px", border: "1px solid #bbb", borderRadius: "4px", fontSize: "14px" }}
+          >
+            <option>Frontend</option>
+            <option>Backend</option>
+            <option>Database</option>
+            <option>Deployment</option>
+          </select>
+          <button type="submit" style={{ padding: "9px 20px", background: "#2c3e50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}>
+            Add Task
+          </button>
+        </form>
+      </div>
+
+      {/* Task List Board */}
+      <div className="board-panel" id="board">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", flexWrap: "wrap", gap: "10px" }}>
+          <h2 style={{ margin: 0 }}>My Tasks ({visibleTasks.length})</h2>
+          <div>
+            {statuses.map(s => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                style={{
+                  margin: "0 3px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  background: filter === s ? "#2c3e50" : "#eee",
+                  color: filter === s ? "white" : "#333",
+                  border: "none",
+                  borderRadius: "12px"
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {visibleTasks.length === 0 ? (
+          <p style={{ color: "#888", textAlign: "center", padding: "20px" }}>No tasks in this category.</p>
+        ) : (
+          visibleTasks.map(task => (
+            <div key={task.id} className={`task-card status-${task.status.replace(" ", "-")}`}>
+              <div className="task-info">
+                <h4>{task.title}</h4>
+                <span className="cat-tag">{task.category}</span>
+              </div>
+              <div className="task-actions">
+                <select
+                  value={task.status}
+                  onChange={e => handleStatusChange(task.id, e.target.value)}
+                  style={{ padding: "5px", fontSize: "12px", border: "1px solid #bbb", borderRadius: "4px" }}
+                >
+                  <option>Pending</option>
+                  <option>In Progress</option>
+                  <option>Done</option>
+                </select>
+                <button
+                  onClick={() => handleDeleteTask(task.id)}
+                  style={{ padding: "5px 10px", background: "#d9534f", color: "white", border: "none", borderRadius: "4px", fontSize: "12px", cursor: "pointer" }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<TaskBoard />);
+</script>
+</body>
+</html>
